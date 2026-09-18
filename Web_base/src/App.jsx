@@ -3,8 +3,9 @@ import { ProjectDetailPanel } from './components/ProjectDetailPanel';
 import { KanbanBoard } from './components/KanbanBoard';
 import { ProjectListPanel } from './components/ProjectListPanel';
 import { Sidebar } from './components/Sidebar';
+import { SchedulePanel } from './components/SchedulePanel';
 import { TicketListPanel } from './components/TicketListPanel';
-import { defaultProjects, readProjects, readRecentIds, readTickets, writeProjects, writeTickets, writeRecentIds } from './projectStorage';
+import { defaultProjects, readProjects, readRecentIds, readSprints, readTickets, writeProjects, writeRecentIds, writeSprints, writeTickets } from './projectStorage';
 import { ticketTypes } from './ticketTypes';
 
 const ticketPrefixes = {
@@ -29,6 +30,7 @@ function getHashRoute(hash) {
   if (hash === '#favorites') return 'favorites';
   if (hash === '#recent') return 'recent';
   if (hash === '#board') return 'board';
+  if (hash === '#schedule') return 'schedule';
   if (hash === '#tickets') return 'tickets';
   return 'all';
 }
@@ -36,6 +38,7 @@ function getHashRoute(hash) {
 export function App() {
   const [projects, setProjects] = useState(() => readProjects());
   const [tickets, setTickets] = useState(() => readTickets());
+  const [sprintDefinitions, setSprintDefinitions] = useState(() => readSprints());
   const [recentIds, setRecentIds] = useState(() => readRecentIds());
   const [selectedId, setSelectedId] = useState(defaultProjects[0].id);
   const [ticketProjectId, setTicketProjectId] = useState(defaultProjects[0].id);
@@ -45,9 +48,10 @@ export function App() {
   const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [theme, setTheme] = useState('dark');
   const [showForm, setShowForm] = useState(false);
+  const [showSprintSettings, setShowSprintSettings] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [commentDraft, setCommentDraft] = useState('');
-  const [form, setForm] = useState({ ticketId: '', name: '', path: '', tags: '', sprint: '', ticketType: 'Task', parentId: '', projectId: '', assignee: '', gitBranch: '', repoStatus: 'clean' });
+  const [form, setForm] = useState({ ticketId: '', name: '', path: '', tags: '', sprint: '', startDate: '', endDate: '', ticketType: 'Task', parentId: '', projectId: '', assignee: '', gitBranch: '', repoStatus: 'clean' });
   const [detailForm, setDetailForm] = useState({ name: '', path: '', tags: '', gitBranch: '', repoStatus: 'clean' });
 
   useEffect(() => {
@@ -57,6 +61,10 @@ export function App() {
   useEffect(() => {
     writeTickets(tickets);
   }, [tickets]);
+
+  useEffect(() => {
+    writeSprints(sprintDefinitions);
+  }, [sprintDefinitions]);
 
   useEffect(() => {
     writeRecentIds(recentIds);
@@ -238,7 +246,7 @@ export function App() {
   const closeTicketForm = () => {
     setShowForm(false);
     setEditingProjectId(null);
-    setForm({ ticketId: '', name: '', path: '', tags: '', sprint: '', ticketType: 'Task', parentId: '', projectId: '', assignee: '', gitBranch: '', repoStatus: 'clean' });
+    setForm({ ticketId: '', name: '', path: '', tags: '', sprint: '', startDate: '', endDate: '', ticketType: 'Task', parentId: '', projectId: '', assignee: '', gitBranch: '', repoStatus: 'clean' });
   };
 
   const addProject = (event) => {
@@ -349,6 +357,7 @@ export function App() {
     });
     setRecentIds((current) => current.filter((item) => item !== id));
     setTickets((current) => current.filter((ticket) => ticket.projectId !== id));
+    setSprintDefinitions((current) => current.filter((sprint) => sprint.projectId !== id));
 
     if (ticketProjectId === id) {
       setTicketProjectId((current) => current && current !== id ? current : (projects.find((project) => project.id !== id)?.id ?? null));
@@ -364,6 +373,8 @@ export function App() {
       path: '',
       tags: '',
       sprint: '',
+      startDate: '',
+      endDate: '',
       ticketType: 'Task',
       parentId: '',
       projectId: targetProject ? String(targetProject.id) : String(ticketProjectId ?? ''),
@@ -382,6 +393,8 @@ export function App() {
       path: '',
       tags: '',
       sprint: project.sprint ?? '',
+      startDate: project.startDate ?? '',
+      endDate: project.endDate ?? '',
       ticketType: ticketTypes.includes(project.ticketType) ? project.ticketType : 'Task',
       parentId: project.parentId ? String(project.parentId) : '',
       projectId: String(project.projectId ?? ''),
@@ -403,6 +416,8 @@ export function App() {
       title,
       projectId,
       sprint: form.sprint.trim(),
+      startDate: form.startDate,
+      endDate: form.endDate,
       ticketType: ticketTypes.includes(form.ticketType) ? form.ticketType : 'Task',
       parentId: form.parentId ? Number(form.parentId) : null,
       order: tickets.filter((ticket) => ticket.projectId === projectId && (ticket.parentId ?? null) === (form.parentId ? Number(form.parentId) : null)).length,
@@ -428,6 +443,16 @@ export function App() {
     setTickets((current) => current.map((ticket) => ticket.id === id ? { ...ticket, status } : ticket));
   };
 
+  const saveSprintDefinition = (sprint) => {
+    setSprintDefinitions((current) => current.some((item) => item.id === sprint.id)
+      ? current.map((item) => item.id === sprint.id ? sprint : item)
+      : [...current, sprint]);
+  };
+
+  const deleteSprintDefinition = (id) => {
+    setSprintDefinitions((current) => current.filter((sprint) => sprint.id !== id));
+  };
+
   const handleBrowseFolder = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -441,7 +466,7 @@ export function App() {
   };
 
   const handleExportProjects = () => {
-    const payload = JSON.stringify({ projects, tickets }, null, 2);
+    const payload = JSON.stringify({ projects, tickets, sprints: sprintDefinitions }, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -490,12 +515,22 @@ export function App() {
           title: ticket.title ?? 'Imported Ticket',
           projectId: Number(ticket.projectId) || null,
           sprint: ticket.sprint ?? '',
+          startDate: ticket.startDate ?? '',
+          endDate: ticket.endDate ?? '',
           ticketType: ticketTypes.includes(ticket.ticketType) ? ticket.ticketType : 'Task',
           parentId: Number(ticket.parentId) || null,
           assignee: ticket.assignee ?? '',
           status: ['todo', 'doing', 'done'].includes(ticket.status) ? ticket.status : 'todo',
         }));
         setTickets((current) => [...normalizedTickets, ...current]);
+        const normalizedSprints = (parsed.sprints ?? []).map((sprint) => ({
+          id: Number(sprint.id) || Date.now() + Math.random(),
+          projectId: Number(sprint.projectId) || null,
+          name: sprint.name ?? 'Imported Sprint',
+          startDate: sprint.startDate ?? '',
+          endDate: sprint.endDate ?? '',
+        })).filter((sprint) => sprint.projectId != null);
+        setSprintDefinitions((current) => [...normalizedSprints, ...current]);
       }
     } catch (error) {
       console.error('Unable to import projects', error);
@@ -541,6 +576,29 @@ export function App() {
             projectOptions={projects}
             onSelectTicket={openTicketEditModal}
             onMoveTicketStatus={moveTicketStatus}
+            showForm={showForm}
+            onToggleForm={closeTicketForm}
+            form={form}
+            onFormChange={(field, value) => setForm((current) => ({ ...current, [field]: value }))}
+            parentTickets={parentTickets}
+            ticketTypes={ticketTypes}
+            onAddTicket={addTicket}
+            showSprintSettings={showSprintSettings}
+            onToggleSprintSettings={() => setShowSprintSettings((value) => !value)}
+            sprintDefinitions={sprintDefinitions}
+            onSaveSprint={saveSprintDefinition}
+            onDeleteSprint={deleteSprintDefinition}
+          />
+        ) : route === 'schedule' ? (
+          <SchedulePanel
+            tickets={tickets}
+            projects={projects}
+            sprintDefinitions={sprintDefinitions}
+            onSelectTicket={openTicketEditModal}
+            showSprintSettings={showSprintSettings}
+            onToggleSprintSettings={() => setShowSprintSettings((value) => !value)}
+            onSaveSprint={saveSprintDefinition}
+            onDeleteSprint={deleteSprintDefinition}
           />
         ) : <ProjectListPanel
           projects={sortedProjects}
@@ -568,7 +626,7 @@ export function App() {
           invalidProjectCount={invalidProjectCount}
         />}
 
-        {route !== 'board' && route !== 'tickets' && <ProjectDetailPanel
+        {route !== 'board' && route !== 'tickets' && route !== 'schedule' && <ProjectDetailPanel
           selectedProject={selectedProject}
           detailForm={detailForm}
           commentDraft={commentDraft}

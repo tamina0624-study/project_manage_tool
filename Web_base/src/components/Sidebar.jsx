@@ -38,6 +38,13 @@ export function Sidebar({ route, onNavigate, recentProjects, onSelectProject, th
         </button>
         <button
           type="button"
+          className={`nav-button ${route === 'schedule' ? 'active' : ''}`}
+          onClick={() => onNavigate('schedule')}
+        >
+          Schedule
+        </button>
+        <button
+          type="button"
           className={`nav-button ${route === 'tickets' ? 'active' : ''}`}
           onClick={() => onNavigate('tickets')}
         >

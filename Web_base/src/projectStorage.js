@@ -1,6 +1,7 @@
 export const STORAGE_KEY = 'web-project-manager-projects';
 export const TICKETS_STORAGE_KEY = 'web-project-manager-tickets';
 export const RECENT_KEY = 'web-project-manager-recent';
+export const SPRINTS_STORAGE_KEY = 'web-project-manager-sprints';
 
 export const defaultProjects = [
   { id: 1, name: 'My App', path: '/workspace/my-app', favorite: true, tags: ['app', 'react'], gitBranch: 'main', repoStatus: 'clean', comments: [] },
@@ -84,6 +85,15 @@ export function writeProjects(projects) {
 
 export function writeTickets(tickets) {
   localStorage.setItem(TICKETS_STORAGE_KEY, JSON.stringify(tickets));
+}
+
+export function readSprints() {
+  const saved = localStorage.getItem(SPRINTS_STORAGE_KEY);
+  return saved ? JSON.parse(saved) : [];
+}
+
+export function writeSprints(sprints) {
+  localStorage.setItem(SPRINTS_STORAGE_KEY, JSON.stringify(sprints));
 }
 
 export function readRecentIds() {

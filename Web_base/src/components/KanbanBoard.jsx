@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { backlogMeta, ticketTypeMeta } from '../ticketTypes';
+import { SprintSettingsModal } from './SprintSettingsModal';
+import { TicketFormModal } from './TicketFormModal';
 
 const columns = [
   { id: 'todo', title: 'Todo' },
@@ -7,9 +9,10 @@ const columns = [
   { id: 'done', title: 'Done' },
 ];
 
-export function KanbanBoard({ tickets, projectOptions, onSelectTicket, onMoveTicketStatus }) {
+export function KanbanBoard({ tickets, projectOptions, onSelectTicket, onMoveTicketStatus, showForm, onToggleForm, form, onFormChange, parentTickets, ticketTypes, onAddTicket, showSprintSettings, onToggleSprintSettings, sprintDefinitions, onSaveSprint, onDeleteSprint }) {
   const [selectedProjectId, setSelectedProjectId] = useState('all');
   const [selectedSprint, setSelectedSprint] = useState('all');
+  const [copiedTicketId, setCopiedTicketId] = useState(null);
   const selectedTickets = selectedProjectId === 'all'
     ? (tickets ?? [])
     : (tickets ?? []).filter((ticket) => Number(ticket.projectId) === Number(selectedProjectId));
@@ -29,6 +32,14 @@ export function KanbanBoard({ tickets, projectOptions, onSelectTicket, onMoveTic
     return <span className={`ticket-type ${meta.className}`}><span className="ticket-type-icon" aria-hidden="true">{meta.icon}</span>{ticketType ?? 'Task'}</span>;
   };
 
+  const copyTicketText = async (event, ticket) => {
+    event.stopPropagation();
+    const text = `${ticket.ticketId ?? 'No ID'} · ${ticket.title}`;
+    await navigator.clipboard.writeText(text);
+    setCopiedTicketId(ticket.id);
+    window.setTimeout(() => setCopiedTicketId((current) => current === ticket.id ? null : current), 1500);
+  };
+
   const handleDrop = (event, status) => {
     event.preventDefault();
     const ticketId = Number(event.dataTransfer.getData('text/ticket-id'));
@@ -37,9 +48,12 @@ export function KanbanBoard({ tickets, projectOptions, onSelectTicket, onMoveTic
 
   const renderCard = (ticket, className = 'kanban-card') => (
     <article
+      key={ticket.id}
       className={className}
       draggable
-      onClick={() => onSelectTicket?.(ticket)}
+      onClick={(event) => {
+        if (event.detail === 2) onSelectTicket?.(ticket);
+      }}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/ticket-id', String(ticket.id));
@@ -47,6 +61,7 @@ export function KanbanBoard({ tickets, projectOptions, onSelectTicket, onMoveTic
     >
       <div className="kanban-card-title">
         <h4>{ticket.ticketId ?? 'No ID'} · {ticket.title}</h4>
+        <button type="button" className="copy-text-button" aria-label={`Copy ${ticket.title}`} onClick={(event) => copyTicketText(event, ticket)}>{copiedTicketId === ticket.id ? 'Copied' : 'Copy'}</button>
         {renderTicketType(ticket.ticketType)}
       </div>
       <div className="kanban-card-meta">
@@ -80,6 +95,7 @@ export function KanbanBoard({ tickets, projectOptions, onSelectTicket, onMoveTic
           <p className="panel-subtitle">Track tickets for the selected project.</p>
         </div>
         <div className="board-filters">
+          <button type="button" className="secondary-button sprint-settings-button" onClick={onToggleSprintSettings}>Sprint settings</button>
           <label className="sprint-filter">
             Project
             <select value={selectedProjectId} onChange={(event) => { setSelectedProjectId(event.target.value); setSelectedSprint('all'); }}>
@@ -142,6 +158,8 @@ export function KanbanBoard({ tickets, projectOptions, onSelectTicket, onMoveTic
           </div>
         ))}
       </div>
+      {showSprintSettings && <SprintSettingsModal sprints={sprintDefinitions} projects={projectOptions} onClose={onToggleSprintSettings} onSave={onSaveSprint} onDelete={onDeleteSprint} />}
+      {showForm && <TicketFormModal form={form} onToggleForm={onToggleForm} onFormChange={onFormChange} projectOptions={projectOptions} parentTickets={parentTickets} ticketTypes={ticketTypes} onAddTicket={onAddTicket} />}
     </section>
   );
 }

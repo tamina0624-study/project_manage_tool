@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { backlogMeta, ticketTypeMeta } from '../ticketTypes';
+import { TicketFormModal } from './TicketFormModal';
 
 const statusLabels = {
   todo: 'Todo',
@@ -27,7 +28,17 @@ export function TicketListPanel({
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [draggedTicketId, setDraggedTicketId] = useState(null);
   const [dropTargetId, setDropTargetId] = useState(null);
+  const [dropTargetMode, setDropTargetMode] = useState(null);
+  const [copiedTicketId, setCopiedTicketId] = useState(null);
   const toggleMenu = (id) => setMenuOpenId((current) => current === id ? null : id);
+
+  const copyTicketText = async (event, ticket) => {
+    event.stopPropagation();
+    const text = `${ticket.ticketId ?? 'No ID'} · ${ticket.title}`;
+    await navigator.clipboard.writeText(text);
+    setCopiedTicketId(ticket.id);
+    window.setTimeout(() => setCopiedTicketId((current) => current === ticket.id ? null : current), 1500);
+  };
 
   const buildTreeRows = (list) => {
     const byParent = new Map();
@@ -65,7 +76,9 @@ export function TicketListPanel({
     if (draggedTicketId != null) onMoveTicket?.(draggedTicketId, targetId, mode);
     setDraggedTicketId(null);
     setDropTargetId(null);
+    setDropTargetMode(null);
   };
+  const handleSameLevelDrop = (event, targetId) => handleDrop(event, targetId, 'before');
 
   return (
     <section className="ticket-panel">
@@ -95,7 +108,6 @@ export function TicketListPanel({
           <table className="ticket-table" role="table">
             <thead>
               <tr>
-                <th>Parent ticket</th>
                 <th className="ticket-header-actions">
                   <div className="ticket-header-control">
                     <button type="button" className="ticket-menu-trigger ticket-menu-trigger-left" aria-label="Open ticket actions" onClick={() => toggleMenu('header')}>☰</button>
@@ -116,31 +128,32 @@ export function TicketListPanel({
               {treeRows.map(({ ticket, depth }) => (
                 <tr
                   key={ticket.id}
-                  className={`ticket-tree-row ${dropTargetId === ticket.id ? 'ticket-drop-target' : ''}`}
+                  className={`ticket-tree-row ${dropTargetId === ticket.id ? `ticket-drop-target ticket-drop-target-${dropTargetMode}` : ''}`}
                   draggable
+                  onDoubleClick={(event) => {
+                    if (event.target.closest('button, select, input, a')) return;
+                    onEditTicket?.(ticket);
+                  }}
                   onDragStart={(event) => {
                     setDraggedTicketId(ticket.id);
                     event.dataTransfer.effectAllowed = 'move';
                     event.dataTransfer.setData('text/ticket-id', String(ticket.id));
                   }}
-                  onDragEnd={() => { setDraggedTicketId(null); setDropTargetId(null); }}
+                  onDragEnd={() => { setDraggedTicketId(null); setDropTargetId(null); setDropTargetMode(null); }}
                   onDragOver={(event) => {
                     event.preventDefault();
                     event.dataTransfer.dropEffect = 'move';
                     setDropTargetId(ticket.id);
+                    setDropTargetMode('reorder');
                   }}
                   onDrop={(event) => handleDrop(event, ticket.id, 'before')}
                 >
-                  <td>
-                    {ticket.parentId && ticketById.has(ticket.parentId) ? (
-                      <span className="parent-ticket-label">
-                        {ticketById.get(ticket.parentId).ticketId ?? 'No ID'} · {ticketById.get(ticket.parentId).title}
-                      </span>
-                    ) : (
-                      <span className="parent-ticket-empty">No parent</span>
-                    )}
-                  </td>
-                  <td>
+                  <td
+                    className="ticket-reorder-drop-zone"
+                    data-drop-active={dropTargetId === ticket.id && dropTargetMode === 'reorder' ? 'true' : undefined}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => handleSameLevelDrop(event, ticket.id)}
+                  >
                     <div className="ticket-table-actions">
                       <div className="ticket-menu-wrap">
                         <button type="button" className="ticket-menu-trigger" aria-label={`Open actions for ${ticket.title}`} onClick={() => toggleMenu(ticket.id)}>☰</button>
@@ -163,22 +176,41 @@ export function TicketListPanel({
                       </div>
                     </div>
                   </td>
-                  <td>{renderTicketType(ticket.ticketType)}</td>
+                  <td
+                    className="ticket-reorder-drop-zone"
+                    data-drop-active={dropTargetId === ticket.id && dropTargetMode === 'reorder' ? 'true' : undefined}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => handleSameLevelDrop(event, ticket.id)}
+                  >{renderTicketType(ticket.ticketType)}</td>
                   <td
                     onDragOver={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
                       setDropTargetId(ticket.id);
+                      setDropTargetMode('child');
                     }}
                     onDrop={(event) => handleDrop(event, ticket.id, 'child')}
+                    className={dropTargetId === ticket.id && dropTargetMode === 'child' ? 'ticket-child-drop-zone' : ''}
+                    title="Drop here to make this ticket a child"
                   >
                     <div className="ticket-title-cell" style={{ marginLeft: `${depth * 1.2}rem` }}>
                       <span className="ticket-tree-visual" aria-hidden="true">{depth > 0 ? '├─' : '◉'}</span>
                       <strong>{ticket.ticketId ?? 'No ID'} · {ticket.title}</strong>
+                      <button type="button" className="copy-text-button" aria-label={`Copy ${ticket.title}`} onClick={(event) => copyTicketText(event, ticket)}>{copiedTicketId === ticket.id ? 'Copied' : 'Copy'}</button>
                     </div>
                   </td>
-                  <td><span className="ticket-status">{statusLabels[ticket.status ?? 'todo'] ?? 'Todo'}</span></td>
-                  <td>{renderBacklog(ticket.sprint)}</td>
+                  <td
+                    className="ticket-reorder-drop-zone"
+                    data-drop-active={dropTargetId === ticket.id && dropTargetMode === 'reorder' ? 'true' : undefined}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => handleSameLevelDrop(event, ticket.id)}
+                  ><span className="ticket-status">{statusLabels[ticket.status ?? 'todo'] ?? 'Todo'}</span></td>
+                  <td
+                    className="ticket-reorder-drop-zone"
+                    data-drop-active={dropTargetId === ticket.id && dropTargetMode === 'reorder' ? 'true' : undefined}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => handleSameLevelDrop(event, ticket.id)}
+                  >{renderBacklog(ticket.sprint)}</td>
                 </tr>
               ))}
             </tbody>
@@ -186,26 +218,7 @@ export function TicketListPanel({
         ) : <div className="empty-state">No tickets match your current filter.</div>}
       </div>
 
-      {showForm && (
-        <div className="modal-backdrop" onClick={onToggleForm}>
-          <aside className="modal-panel" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div><p className="modal-kicker">Ticket</p><h3>{form.ticketId || form.name ? 'Edit Ticket' : 'New Ticket'}</h3></div>
-              <button type="button" className="ghost-button" onClick={onToggleForm}>Close</button>
-            </div>
-            <form className="project-form modal-form" onSubmit={onAddTicket}>
-              <label>Project<select value={form.projectId} onChange={(event) => onFormChange('projectId', event.target.value)}><option value="">Select a project</option>{projectOptions.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
-              <label>Ticket ID<input type="text" value={form.ticketId} onChange={(event) => onFormChange('ticketId', event.target.value)} placeholder="Auto-generated (e.g. TASK-001)" /></label>
-              <label>Ticket title<input type="text" value={form.name} onChange={(event) => onFormChange('name', event.target.value)} placeholder="My ticket" /></label>
-              <label>Sprint<input type="text" value={form.sprint} onChange={(event) => onFormChange('sprint', event.target.value)} placeholder="Sprint 1" /></label>
-              <label>Ticket type<select value={form.ticketType} onChange={(event) => onFormChange('ticketType', event.target.value)}>{ticketTypes.map((ticketType) => <option key={ticketType} value={ticketType}>{ticketType}</option>)}</select></label>
-              <label>Parent ticket<select value={form.parentId} onChange={(event) => onFormChange('parentId', event.target.value)}><option value="">No parent</option>{parentTickets.filter((ticket) => ticket.projectId === Number(form.projectId)).map((ticket) => <option key={ticket.id} value={ticket.id}>{ticket.ticketId ?? 'No ID'} - {ticket.title}</option>)}</select></label>
-              <label>Assignee<input type="text" value={form.assignee} onChange={(event) => onFormChange('assignee', event.target.value)} placeholder="Assignee" /></label>
-              <div className="modal-actions"><button type="button" className="secondary-button" onClick={onToggleForm}>Cancel</button><button type="submit" className="primary-button">{form.ticketId || form.name ? 'Save Ticket' : 'Create Ticket'}</button></div>
-            </form>
-          </aside>
-        </div>
-      )}
+      {showForm && <TicketFormModal form={form} onToggleForm={onToggleForm} onFormChange={onFormChange} projectOptions={projectOptions} parentTickets={parentTickets} ticketTypes={ticketTypes} onAddTicket={onAddTicket} />}
     </section>
   );
 }
