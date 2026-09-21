@@ -1,0 +1,5 @@
+Web_base/.env
+Web_base/project_manager.sqlite
+Web_base/node_modules/
+Web_base/dist/
+/.local-data/

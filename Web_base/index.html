@@ -4,9 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Project Manager Web</title>
+    <link rel="stylesheet" href="src/styles.css" />
   </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+  <body class="theme-dark">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1>PM</h1>
+          <button id="themeToggle" class="theme-toggle" type="button">☀</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <button type="button" class="nav-button active" data-route="projects">Projects</button>
+          <button type="button" class="nav-button" data-route="favorites">Favorites</button>
+          <button type="button" class="nav-button" data-route="recent">Recent</button>
+          <button type="button" class="nav-button" data-route="tickets">Tickets</button>
+          <button type="button" class="nav-button" data-route="board">Board</button>
+          <button type="button" class="nav-button" data-route="schedule">Schedule</button>
+        </nav>
+
+        <div class="recent-section">
+          <h3>Recent projects</h3>
+          <ul id="recentList" class="recent-list"></ul>
+        </div>
+      </aside>
+
+      <main class="workspace-layout">
+        <section id="projectView" class="content-panel view visible"></section>
+        <section id="ticketView" class="content-panel view hidden"></section>
+        <section id="boardView" class="content-panel view hidden"></section>
+        <section id="scheduleView" class="content-panel view hidden"></section>
+        <aside id="detailPanel" class="detail-panel"></aside>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
   </body>
 </html>
