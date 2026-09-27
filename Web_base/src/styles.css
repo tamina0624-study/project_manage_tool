@@ -793,6 +793,38 @@ body.theme-light .sprint-card {
   min-height: 2rem;
 }
 
+.ticket-title-content {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ticket-collapse-toggle,
+.ticket-collapse-spacer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.2rem;
+  flex: 0 0 1.5rem;
+}
+
+.ticket-collapse-toggle {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.68rem;
+}
+
+.ticket-collapse-toggle:hover,
+.ticket-collapse-toggle:focus-visible {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--text-main);
+  outline: none;
+}
+
 .copy-text-button {
   flex-shrink: 0;
   border: 1px solid var(--panel-border);

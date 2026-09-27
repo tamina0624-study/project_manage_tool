@@ -34,6 +34,7 @@ const state = {
   sortMode: 'saved',
   ticketDraft: null,
   ticketProjectId: null,
+  collapsedTicketIds: new Set(),
   boardProjectId: null,
   boardSprint: 'all',
   boardTicketId: null,
@@ -199,7 +200,7 @@ function ticketStatusLabel(status) {
   return `<span class="ticket-status ticket-status-${normalized}">${labels[normalized]}</span>`;
 }
 
-function buildTicketRows(tickets) {
+function buildTicketRows(tickets, collapsedTicketIds = new Set()) {
   const childrenByParent = new Map();
   tickets.forEach((ticket) => {
     const parentId = ticket.parentId == null || ticket.parentId === '' ? null : Number(ticket.parentId);
@@ -208,9 +209,11 @@ function buildTicketRows(tickets) {
   const rows = [];
   const visit = (ticket, depth, visited) => {
     if (visited.has(ticket.id)) return;
-    rows.push({ ticket, depth });
+    const children = childrenByParent.get(ticket.id) || [];
+    rows.push({ ticket, depth, hasChildren: children.length > 0 });
+    if (collapsedTicketIds.has(ticket.id)) return;
     const nextVisited = new Set(visited).add(ticket.id);
-    (childrenByParent.get(ticket.id) || [])
+    children
       .sort((a, b) => (a.order || 0) - (b.order || 0) || a.title.localeCompare(b.title))
       .forEach((child) => visit(child, depth + 1, nextVisited));
   };
@@ -645,7 +648,9 @@ function renderTicketList() {
   const visibleTickets = state.ticketProjectId
     ? state.tickets.filter((ticket) => Number(ticket.projectId) === Number(state.ticketProjectId))
     : state.tickets;
-  const rows = buildTicketRows(visibleTickets).map(({ ticket, depth }) => `
+  const rows = buildTicketRows(visibleTickets, state.collapsedTicketIds).map(({ ticket, depth, hasChildren }) => {
+    const isCollapsed = state.collapsedTicketIds.has(ticket.id);
+    return `
     <tr class="ticket-tree-row" data-ticket-row="${escapeHtml(ticket.id)}" draggable="true">
       <td class="ticket-row-actions-cell">
         <div class="ticket-menu-wrap">
@@ -658,14 +663,22 @@ function renderTicketList() {
         </div>
       </td>
        <td class="ticket-reorder-target" data-reorder-target="${escapeHtml(ticket.id)}">${escapeHtml(ticket.ticketId)}</td>
-       <td><span class="ticket-type-icon ticket-type-icon-${escapeHtml(String(ticket.ticketType || 'Task').toLowerCase())}" title="${escapeHtml(ticket.ticketType || 'Task')}">${ticketTypeIcon(ticket.ticketType)}</span><span style="display:inline-block; margin-left:${depth * 1.2}rem">${depth ? '└ ' : ''}${escapeHtml(ticket.title)}</span><button type="button" class="copy-text-button" data-copy-ticket="${escapeHtml(ticket.id)}">Copy</button></td>
+       <td>
+         <span class="ticket-title-content" style="margin-left:${depth * 1.2}rem">
+           ${hasChildren ? `<button type="button" class="ticket-collapse-toggle" data-toggle-ticket="${escapeHtml(ticket.id)}" aria-expanded="${!isCollapsed}" aria-label="${isCollapsed ? 'Expand' : 'Collapse'} child tickets">${isCollapsed ? '▶' : '▼'}</button>` : '<span class="ticket-collapse-spacer" aria-hidden="true"></span>'}
+           <span class="ticket-type-icon ticket-type-icon-${escapeHtml(String(ticket.ticketType || 'Task').toLowerCase())}" title="${escapeHtml(ticket.ticketType || 'Task')}">${ticketTypeIcon(ticket.ticketType)}</span>
+           <span>${depth ? '└ ' : ''}${escapeHtml(ticket.title)}</span>
+         </span>
+         <button type="button" class="copy-text-button" data-copy-ticket="${escapeHtml(ticket.id)}">Copy</button>
+       </td>
        <td>${escapeHtml(projectMap.get(ticket.projectId)?.name || 'Unknown')}</td>
        <td>${escapeHtml(ticket.assignee || '-')}</td>
       <td>${ticketStatusLabel(ticket.status)}</td>
        <td>${escapeHtml(ticket.ticketType || 'Task')}</td>
        <td>${escapeHtml(ticket.sprint || 'Product Backlog')}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   ticketView.innerHTML = `
     <div class="panel-header">
@@ -706,6 +719,16 @@ function renderTicketList() {
   document.getElementById('ticketProjectFilter').addEventListener('change', (event) => {
     state.ticketProjectId = event.target.value ? Number(event.target.value) : null;
     render();
+  });
+
+  ticketView.querySelectorAll('[data-toggle-ticket]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const ticketId = Number(button.dataset.toggleTicket);
+      if (state.collapsedTicketIds.has(ticketId)) state.collapsedTicketIds.delete(ticketId);
+      else state.collapsedTicketIds.add(ticketId);
+      renderTicketList();
+    });
   });
 
   ticketView.querySelectorAll('[data-ticket-menu-trigger]').forEach((button) => {

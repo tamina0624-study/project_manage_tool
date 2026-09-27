@@ -143,7 +143,7 @@ DB_USER=root
 DB_PASS=
 ```
 
-MySQLを使う場合は、先に `project_manager` データベースを作成してください。APIが必要な `app_state` テーブルを自動作成します。
+MySQLを使う場合は、先に `project_manager` データベースを作成してください。APIが必要な `project_manager_app_state` テーブルを自動作成します。
 
 `.local-data` はGit管理対象外です。`Web_base` をWebサーバーの公開ディレクトリに設定し、プロジェクト直下は公開しないでください。
 

@@ -160,7 +160,7 @@ function ensureDatabase(): PDO
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
-        $pdo->exec("CREATE TABLE IF NOT EXISTS app_state (id INTEGER PRIMARY KEY AUTOINCREMENT, `key` TEXT NOT NULL UNIQUE, value TEXT NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS project_manager_app_state (id INTEGER PRIMARY KEY AUTOINCREMENT, `key` TEXT NOT NULL UNIQUE, value TEXT NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
         return $pdo;
     }
 
@@ -173,7 +173,7 @@ function ensureDatabase(): PDO
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
         $pdo->exec(
-            "CREATE TABLE IF NOT EXISTS app_state (
+            "CREATE TABLE IF NOT EXISTS project_manager_app_state (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 `key` VARCHAR(64) NOT NULL UNIQUE,
                 value JSON NOT NULL,
@@ -187,7 +187,7 @@ function ensureDatabase(): PDO
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
-        $pdo->exec("CREATE TABLE IF NOT EXISTS app_state (id INTEGER PRIMARY KEY AUTOINCREMENT, `key` TEXT NOT NULL UNIQUE, value TEXT NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS project_manager_app_state (id INTEGER PRIMARY KEY AUTOINCREMENT, `key` TEXT NOT NULL UNIQUE, value TEXT NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
         return $pdo;
     }
 }
@@ -197,7 +197,7 @@ function readState(PDO $pdo): array
     $defaultState = getDefaultState();
 
     try {
-        $stmt = $pdo->query("SELECT `key`, value FROM app_state");
+        $stmt = $pdo->query("SELECT `key`, value FROM project_manager_app_state");
         $rows = $stmt->fetchAll();
     } catch (Throwable $e) {
         return $defaultState;
@@ -226,7 +226,7 @@ function writeState(PDO $pdo, string $key, mixed $value): void
 
     if ($driver === 'mysql') {
         $stmt = $pdo->prepare(
-            "INSERT INTO app_state (`key`, value) VALUES (:key, :value)
+            "INSERT INTO project_manager_app_state (`key`, value) VALUES (:key, :value)
              ON DUPLICATE KEY UPDATE value = VALUES(value)"
         );
         $stmt->execute([
@@ -237,7 +237,7 @@ function writeState(PDO $pdo, string $key, mixed $value): void
     }
 
     $stmt = $pdo->prepare(
-        "INSERT INTO app_state (`key`, value) VALUES (:key, :value)
+        "INSERT INTO project_manager_app_state (`key`, value) VALUES (:key, :value)
          ON CONFLICT(`key`) DO UPDATE SET value = excluded.value"
     );
     $stmt->execute([
