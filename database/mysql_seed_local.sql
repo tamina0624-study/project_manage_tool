@@ -41,7 +41,8 @@ VALUES (
             'parentId', NULL,
             'order', 0,
             'assignee', 'Alice',
-            'status', 'doing'
+            'status', 'doing',
+            'notes', ''
         ),
         JSON_OBJECT(
             'id', 102,
@@ -53,7 +54,8 @@ VALUES (
             'parentId', 101,
             'order', 0,
             'assignee', 'Bob',
-            'status', 'todo'
+            'status', 'todo',
+            'notes', ''
         ),
         JSON_OBJECT(
             'id', 103,
@@ -65,7 +67,8 @@ VALUES (
             'parentId', NULL,
             'order', 0,
             'assignee', '',
-            'status', 'done'
+            'status', 'done',
+            'notes', ''
         )
     ),
     '2026-09-20 15:51:48'

@@ -106,7 +106,8 @@ function getDefaultState(): array
                 'parentId' => null,
                 'order' => 0,
                 'assignee' => 'Alice',
-                'status' => 'doing'
+                'status' => 'doing',
+                'notes' => ''
             ],
             [
                 'id' => 102,
@@ -118,7 +119,8 @@ function getDefaultState(): array
                 'parentId' => 101,
                 'order' => 0,
                 'assignee' => 'Bob',
-                'status' => 'todo'
+                'status' => 'todo',
+                'notes' => ''
             ],
             [
                 'id' => 103,
@@ -130,7 +132,8 @@ function getDefaultState(): array
                 'parentId' => null,
                 'order' => 0,
                 'assignee' => '',
-                'status' => 'done'
+                'status' => 'done',
+                'notes' => ''
             ],
         ],
         'sprints' => [],

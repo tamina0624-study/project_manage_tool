@@ -1599,7 +1599,8 @@ body.theme-light .sprint-card {
 }
 
 .ticket-composer-form input,
-.ticket-composer-form select {
+.ticket-composer-form select,
+.ticket-composer-form textarea {
   width: 100%;
   min-width: 0;
   padding: 0.7rem 0.75rem;
@@ -1607,6 +1608,28 @@ body.theme-light .sprint-card {
   border-radius: 9px;
   background: rgba(15, 23, 42, 0.72);
   color: #e2e8f0;
+}
+
+.ticket-composer-form textarea {
+  resize: vertical;
+  font: inherit;
+  line-height: 1.5;
+}
+
+.ticket-notes-preview,
+.kanban-ticket-notes {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.ticket-notes-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .project-detail-form,
@@ -1664,7 +1687,8 @@ body.theme-light .ticket-composer-form label {
 }
 
 body.theme-light .ticket-composer-form input,
-body.theme-light .ticket-composer-form select {
+body.theme-light .ticket-composer-form select,
+body.theme-light .ticket-composer-form textarea {
   background: #fff;
   color: #0f172a;
 }

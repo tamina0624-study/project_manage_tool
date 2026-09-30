@@ -138,12 +138,12 @@ SQLiteのデータベースファイルは `.local-data/project_manager.sqlite` 
 DB_DRIVER=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_NAME=project_manager
+DB_NAME=ss181301_tamitools
 DB_USER=root
 DB_PASS=
 ```
 
-MySQLを使う場合は、先に `project_manager` データベースを作成してください。APIが必要な `project_manager_app_state` テーブルを自動作成します。
+付属のセットアップSQLを使う場合のデータベース名は `ss181301_tamitools` です。別のデータベースを使う場合は、先にそのデータベースを作成し、`DB_NAME` を変更してください。APIは接続先に必要な `project_manager_app_state` テーブルを自動作成します。`DB_DRIVER` を省略した場合もMySQLが選択されます。
 
 `.local-data` はGit管理対象外です。`Web_base` をWebサーバーの公開ディレクトリに設定し、プロジェクト直下は公開しないでください。
 
@@ -156,14 +156,14 @@ SQLiteとMySQLは、どちらも `project_manager_app_state` という1つのテ
 | `id` | `INTEGER PRIMARY KEY AUTOINCREMENT` | `INT AUTO_INCREMENT PRIMARY KEY` | 内部ID |
 | `key` | `TEXT UNIQUE` | `VARCHAR(64) UNIQUE` | データ種別 |
 | `value` | `TEXT` | `JSON` | データ本体のJSON配列 |
-| `updated_at` | `DATETIME` | `TIMESTAMP` | 最終更新日時 |
+| `updated_at` | `DATETIME` | `TIMESTAMP` | SQLiteでは初回挿入日時、MySQLでは自動更新される最終更新日時 |
 
 `key` には次の4種類が入ります。
 
 | `key` | 保存内容 | 主なフィールド |
 | --- | --- | --- |
 | `projects` | プロジェクト一覧 | `id`, `name`, `path`, `favorite`, `tags`, `gitBranch`, `repoStatus`, `comments` |
-| `tickets` | チケット一覧 | `id`, `ticketId`, `title`, `projectId`, `sprint`, `ticketType`, `parentId`, `order`, `assignee`, `status`, `startDate`, `endDate` |
+| `tickets` | チケット一覧 | `id`, `ticketId`, `title`, `projectId`, `sprint`, `ticketType`, `parentId`, `order`, `assignee`, `status`, `startDate`, `endDate`, `notes` |
 | `sprints` | スプリント一覧 | `id`, `name`, `startDate`, `endDate`, `projectId` |
 | `recent` | 最近開いたプロジェクト | プロジェクトIDの配列 |
 
@@ -177,6 +177,8 @@ updated_at: 2026-09-30 12:00:00
 ```
 
 `projectId` はプロジェクトとの関連、`parentId` は親チケットとの関連を表します。ただしDBの外部キー制約はなく、関連の整合性はアプリケーション側で管理します。
+
+SQLiteでは現在のAPIが `project_manager_app_state` を使用します。旧バージョンで作成された `app_state` テーブルは自動では読み込まれません。MySQL用の `database/mysql_seed_local.sql` は、この旧テーブルに保存されていたローカル動作確認データを移すためのファイルです。
 
 ### 構成のコツ: リレーショナル構造にしなかった理由
 
@@ -212,7 +214,7 @@ MySQLでは、付属のセットアップSQLを実行できます。
 mysql -u root -p --execute="source database/mysql_setup.sql"
 ```
 
-このSQLは `ss181301_tamitools` データベースを作成するため、使用する場合は `.local-data/.env` の `DB_NAME` も合わせます。
+コマンドはプロジェクト直下で実行してください。このSQLはMySQL 8.0以降を対象とし、`ss181301_tamitools` データベースと `project_manager_app_state` テーブルを作成します。
 
 ```env
 DB_DRIVER=mysql
@@ -221,6 +223,12 @@ DB_PORT=3306
 DB_NAME=ss181301_tamitools
 DB_USER=root
 DB_PASS=your_password
+```
+
+ローカルで確認したSQLiteデータのサンプルを投入する場合は、セットアップ後に次のSQLを実行します。同じ `key` のデータがすでにある場合、`projects` と `tickets` はサンプル内容で更新されます。
+
+```powershell
+mysql -u root -p --execute="source database/mysql_seed_local.sql"
 ```
 
 APIは起動時にテーブルがなければ自動作成します。MySQLへの接続に失敗した場合は `.local-data/project_manager.sqlite` に自動的に切り替わるため、MySQLへ保存されていることを確認したい場合は利用中のDBを直接確認してください。
@@ -268,6 +276,7 @@ POSTデータは次の形式で送信します。
 - お気に入り、最近開いたプロジェクト、並べ替え
 - プロジェクト情報とコメントの保存
 - チケットの追加、編集、削除
+- チケットごとの備考の保存と表示
 - チケットの親子階層とドラッグ＆ドロップ並べ替え
 - チケットタイプ別アイコン
 - ステータス表示の色分け

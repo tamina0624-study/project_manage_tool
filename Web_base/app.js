@@ -4,9 +4,9 @@ const defaultProjects = [
 ];
 
 const defaultTickets = [
-  { id: 101, ticketId: 'EPIC-001', title: 'Application foundation', projectId: 1, sprint: 'Sprint 1', ticketType: 'Epic', parentId: null, order: 0, assignee: 'Alice', status: 'doing' },
-  { id: 102, ticketId: 'TASK-001', title: 'Documentation', projectId: 1, sprint: 'Sprint 1', ticketType: 'Task', parentId: 101, order: 0, assignee: 'Bob', status: 'todo' },
-  { id: 103, ticketId: 'FEAT-001', title: 'API endpoints', projectId: 2, sprint: '', ticketType: 'Feature', parentId: null, order: 0, assignee: '', status: 'done' },
+  { id: 101, ticketId: 'EPIC-001', title: 'Application foundation', projectId: 1, sprint: 'Sprint 1', ticketType: 'Epic', parentId: null, order: 0, assignee: 'Alice', status: 'doing', notes: '' },
+  { id: 102, ticketId: 'TASK-001', title: 'Documentation', projectId: 1, sprint: 'Sprint 1', ticketType: 'Task', parentId: 101, order: 0, assignee: 'Bob', status: 'todo', notes: '' },
+  { id: 103, ticketId: 'FEAT-001', title: 'API endpoints', projectId: 2, sprint: '', ticketType: 'Feature', parentId: null, order: 0, assignee: '', status: 'done', notes: '' },
 ];
 
 const defaultSprints = [
@@ -569,6 +569,7 @@ function renderTicketComposer() {
     ticketType: 'Task',
     parentId: '',
     assignee: '',
+    notes: '',
   };
   const draft = { ...defaultDraft, ...(state.ticketDraft || {}) };
   const parentTickets = state.tickets.filter((ticket) => ticket.id !== draft.id && Number(ticket.projectId) === Number(draft.projectId));
@@ -617,6 +618,9 @@ function renderTicketComposer() {
         <label>Assignee
            <input name="assignee" value="${escapeHtml(draft.assignee)}" placeholder="Assignee" />
         </label>
+        <label>Notes
+           <textarea name="notes" rows="5" placeholder="Add notes for this ticket">${escapeHtml(draft.notes || '')}</textarea>
+        </label>
         <div class="detail-actions">
           <button type="submit" class="primary-button">${draft.id ? 'Save ticket' : 'Create ticket'}</button>
           <button type="button" id="clearTicketComposer" class="secondary-button">Clear</button>
@@ -655,6 +659,7 @@ function renderTicketComposer() {
       order: draft.order || 0,
       assignee: values.assignee.trim(),
       status: draft.status || 'todo',
+      notes: values.notes.trim(),
     };
 
     state.tickets = draft.id
@@ -701,6 +706,7 @@ function renderTicketList() {
            <span class="ticket-type-icon ticket-type-icon-${escapeHtml(String(ticket.ticketType || 'Task').toLowerCase())}" title="${escapeHtml(ticket.ticketType || 'Task')}">${ticketTypeIcon(ticket.ticketType)}</span>
            <span>${depth ? '└ ' : ''}${escapeHtml(ticket.title)}</span>
          </span>
+         ${ticket.notes ? `<p class="ticket-notes-preview">${escapeHtml(ticket.notes)}</p>` : ''}
          <button type="button" class="copy-text-button" data-copy-ticket="${escapeHtml(ticket.id)}">Copy</button>
        </td>
        <td>${escapeHtml(projectMap.get(ticket.projectId)?.name || 'Unknown')}</td>
@@ -933,6 +939,7 @@ function renderBoard() {
            <div class="kanban-card" data-ticket-status="${escapeHtml(ticket.id)}" draggable="true" tabindex="0">
              <strong><span class="ticket-type-icon ticket-type-icon-${escapeHtml(String(ticket.ticketType || 'Task').toLowerCase())}" title="${escapeHtml(ticket.ticketType || 'Task')}">${ticketTypeIcon(ticket.ticketType)}</span> ${escapeHtml(ticket.ticketId)}</strong>
              <span>${escapeHtml(ticket.title)}</span>
+             ${ticket.notes ? `<p class="kanban-ticket-notes">${escapeHtml(ticket.notes)}</p>` : ''}
           </div>
         `).join('') || '<p class="empty-state">No tickets</p>'}
       </div>
