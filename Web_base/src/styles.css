@@ -189,6 +189,11 @@ body.theme-light .detail-panel {
   flex: 0.8;
 }
 
+.detail-panel.schedule-detail-panel {
+  flex: 0 0 340px;
+  width: 340px;
+}
+
 .hidden {
   display: none !important;
 }
@@ -676,6 +681,11 @@ body.theme-light .sprint-card {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  }
+
+  .detail-panel.schedule-detail-panel {
+    flex-basis: auto;
+    width: 100%;
   }
 
   .kanban-grid {

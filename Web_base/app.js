@@ -200,6 +200,20 @@ function ticketStatusLabel(status) {
   return `<span class="ticket-status ticket-status-${normalized}">${labels[normalized]}</span>`;
 }
 
+function todayDateValue() {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000);
+  return localDate.toISOString().slice(0, 10);
+}
+
+function ticketDatesForStatus(ticket, status) {
+  const today = todayDateValue();
+  if (status === 'todo') return { startDate: '', endDate: '' };
+  if (status === 'doing') return { startDate: ticket.startDate || today, endDate: '' };
+  if (status === 'done') return { startDate: ticket.startDate || today, endDate: today };
+  return { startDate: ticket.startDate || '', endDate: ticket.endDate || '' };
+}
+
 function buildTicketRows(tickets, collapsedTicketIds = new Set()) {
   const childrenByParent = new Map();
   tickets.forEach((ticket) => {
@@ -443,9 +457,16 @@ function renderProjectList() {
 function renderDetailPanel() {
   const showsDetailPanel = ['projects', 'favorites', 'recent'].includes(state.route)
     || (state.route === 'tickets' && state.ticketComposerOpen)
-    || (state.route === 'board' && state.boardTicketId != null);
+    || (state.route === 'board' && state.boardTicketId != null)
+    || state.route === 'schedule';
   detailPanel.classList.toggle('hidden', !showsDetailPanel);
+  detailPanel.classList.toggle('schedule-detail-panel', state.route === 'schedule');
   if (!showsDetailPanel) return;
+
+  if (state.route === 'schedule') {
+    renderSprintComposer();
+    return;
+  }
 
   if (state.route === 'tickets' || state.route === 'board') {
     if (state.route === 'board' && state.boardTicketId != null && !state.ticketDraft) {
@@ -551,6 +572,8 @@ function renderTicketComposer() {
   };
   const draft = { ...defaultDraft, ...(state.ticketDraft || {}) };
   const parentTickets = state.tickets.filter((ticket) => ticket.id !== draft.id && Number(ticket.projectId) === Number(draft.projectId));
+  const projectSprints = state.sprints.filter((sprint) => Number(sprint.projectId) === Number(draft.projectId));
+  const hasSelectedSprint = projectSprints.some((sprint) => sprint.name === draft.sprint);
 
   detailPanel.innerHTML = `
     <div class="detail-card ticket-composer">
@@ -576,7 +599,11 @@ function renderTicketComposer() {
           </select>
         </label>
         <label>Sprint
-           <input name="sprint" value="${escapeHtml(draft.sprint)}" placeholder="Sprint 1" />
+           <select name="sprint">
+             <option value="">Product Backlog</option>
+             ${!hasSelectedSprint && draft.sprint ? `<option value="${escapeHtml(draft.sprint)}" selected>${escapeHtml(draft.sprint)} (unregistered)</option>` : ''}
+             ${projectSprints.map((sprint) => `<option value="${escapeHtml(sprint.name)}" ${draft.sprint === sprint.name ? 'selected' : ''}>${escapeHtml(sprint.name)}</option>`).join('')}
+           </select>
         </label>
         <label>Start date
            <input name="startDate" type="date" value="${escapeHtml(draft.startDate || '')}" />
@@ -601,7 +628,12 @@ function renderTicketComposer() {
   const form = document.getElementById('ticketComposerForm');
   form.addEventListener('input', () => {
     const values = new FormData(form);
-    state.ticketDraft = Object.fromEntries(values.entries());
+    state.ticketDraft = { ...draft, ...Object.fromEntries(values.entries()) };
+  });
+  form.elements.projectId.addEventListener('change', () => {
+    state.ticketDraft = { ...draft, ...Object.fromEntries(new FormData(form).entries()) };
+    state.ticketDraft.sprint = '';
+    renderTicketComposer();
   });
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -957,7 +989,9 @@ function renderBoard() {
         column.classList.remove('kanban-drop-target');
         return;
       }
-      state.tickets = state.tickets.map((ticket) => ticket.id === id ? { ...ticket, status } : ticket);
+      state.tickets = state.tickets.map((ticket) => ticket.id === id
+        ? { ...ticket, status, ...ticketDatesForStatus(ticket, status) }
+        : ticket);
       saveTicketState();
       column.classList.remove('kanban-drop-target');
       render();
@@ -967,13 +1001,6 @@ function renderBoard() {
 }
 
 function renderSchedule() {
-  const draft = state.sprintDraft || {
-    id: null,
-    projectId: state.selectedProjectId ?? state.projects[0]?.id ?? '',
-    name: '',
-    startDate: '',
-    endDate: '',
-  };
   const dayMs = 24 * 60 * 60 * 1000;
   const parseDate = (value) => {
     const date = new Date(`${value}T00:00:00`);
@@ -997,22 +1024,56 @@ function renderSchedule() {
   };
   scheduleView.innerHTML = `
     <div class="panel-header">
-      <h2>Schedule</h2>
+      <div><h2>Schedule</h2><p class="subtle">${state.sprints.length} sprints</p></div>
     </div>
-    <form id="sprintForm" class="sprint-form">
-      <h3>${draft.id ? 'Edit sprint' : 'Add sprint'}</h3>
-       <label>Project<select name="projectId" required>${state.projects.map((project) => `<option value="${escapeHtml(project.id)}" ${Number(draft.projectId) === project.id ? 'selected' : ''}>${escapeHtml(project.name)}</option>`).join('')}</select></label>
-       <label>Name<input name="name" value="${escapeHtml(draft.name)}" placeholder="Sprint 1" required /></label>
-       <label>Start date<input name="startDate" type="date" value="${escapeHtml(draft.startDate)}" required /></label>
-       <label>End date<input name="endDate" type="date" min="${escapeHtml(draft.startDate)}" value="${escapeHtml(draft.endDate)}" required /></label>
-      <div class="detail-actions"><button type="submit" class="primary-button">${draft.id ? 'Save sprint' : 'Add sprint'}</button><button type="button" id="clearSprintForm" class="secondary-button">Clear</button></div>
-    </form>
     <div class="sprint-list">
        ${state.sprints.map((sprint) => `${renderSprintCalendar(sprint)}<div class="detail-actions sprint-actions"><button type="button" class="secondary-button" data-edit-sprint="${escapeHtml(sprint.id)}">Edit</button><button type="button" class="secondary-button" data-delete-sprint="${escapeHtml(sprint.id)}">Delete</button></div>`).join('') || '<p class="empty-state">No sprints</p>'}
     </div>
   `;
+  scheduleView.querySelectorAll('[data-edit-sprint]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const sprint = state.sprints.find((item) => item.id === Number(button.dataset.editSprint));
+      if (!sprint) return;
+      state.sprintDraft = { ...sprint };
+      renderDetailPanel();
+    });
+  });
+  scheduleView.querySelectorAll('[data-delete-sprint]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.sprints = state.sprints.filter((sprint) => sprint.id !== Number(button.dataset.deleteSprint));
+      saveSprintState();
+      render();
+    });
+  });
+}
 
-  document.getElementById('sprintForm').addEventListener('submit', (event) => {
+function renderSprintComposer() {
+  const draft = state.sprintDraft || {
+    id: null,
+    projectId: state.selectedProjectId ?? state.projects[0]?.id ?? '',
+    name: '',
+    startDate: '',
+    endDate: '',
+  };
+  detailPanel.innerHTML = `
+    <div class="detail-card sprint-composer">
+      <p class="modal-kicker">Sprint</p>
+      <h3>${draft.id ? 'Edit sprint' : 'Add sprint'}</h3>
+      <p class="subtle">Set the sprint period using the calendar fields.</p>
+      <form id="sprintForm" class="sprint-form">
+        <label>Project<select name="projectId" required>${state.projects.map((project) => `<option value="${escapeHtml(project.id)}" ${Number(draft.projectId) === project.id ? 'selected' : ''}>${escapeHtml(project.name)}</option>`).join('')}</select></label>
+        <label>Name<input name="name" value="${escapeHtml(draft.name)}" placeholder="Sprint 1" required /></label>
+        <label>Start date<input name="startDate" type="date" value="${escapeHtml(draft.startDate)}" required /></label>
+        <label>End date<input name="endDate" type="date" min="${escapeHtml(draft.startDate)}" value="${escapeHtml(draft.endDate)}" required /></label>
+        <div class="detail-actions"><button type="submit" class="primary-button">${draft.id ? 'Save sprint' : 'Add sprint'}</button><button type="button" id="clearSprintForm" class="secondary-button">Clear</button></div>
+      </form>
+    </div>
+  `;
+
+  const sprintForm = document.getElementById('sprintForm');
+  const sprintStartDate = sprintForm.elements.startDate;
+  const sprintEndDate = sprintForm.elements.endDate;
+  sprintForm.addEventListener('submit', (event) => {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget).entries());
     if (!values.name.trim() || !values.startDate || !values.endDate || values.endDate < values.startDate) return;
@@ -1022,24 +1083,13 @@ function renderSchedule() {
     saveSprintState();
     render();
   });
+  sprintStartDate.addEventListener('change', () => {
+    sprintEndDate.min = sprintStartDate.value;
+    if (sprintEndDate.value && sprintEndDate.value < sprintStartDate.value) sprintEndDate.value = sprintStartDate.value;
+  });
   document.getElementById('clearSprintForm').addEventListener('click', () => {
     state.sprintDraft = null;
-    renderSchedule();
-  });
-  scheduleView.querySelectorAll('[data-edit-sprint]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const sprint = state.sprints.find((item) => item.id === Number(button.dataset.editSprint));
-      if (!sprint) return;
-      state.sprintDraft = { ...sprint };
-      renderSchedule();
-    });
-  });
-  scheduleView.querySelectorAll('[data-delete-sprint]').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.sprints = state.sprints.filter((sprint) => sprint.id !== Number(button.dataset.deleteSprint));
-      saveSprintState();
-      render();
-    });
+    renderDetailPanel();
   });
 }
 
