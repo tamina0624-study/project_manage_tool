@@ -27,11 +27,11 @@ flowchart LR
         browser[ブラウザー]
     end
     subgraph web[Webサーバー]
-        subgraph public[公開ディレクトリ: Web_base]
+        subgraph public[公開ディレクトリ: 02.src/Web_base]
             ui[index.html / app.js / styles.css]
             api[api.php]
         end
-        subgraph private[非公開ディレクトリ: .local-data]
+        subgraph private[非公開ディレクトリ: 00.secret]
             config[.env]
             sqlite[(SQLite DBファイル)]
         end
@@ -66,25 +66,25 @@ flowchart LR
 
 ### 1. プロジェクトを登録・確認する
 
-![プロジェクト一覧と詳細パネル](docs/images/projects.png)
+![プロジェクト一覧と詳細パネル](01.doc/images/projects.png)
 
 左の **Projects** でプロジェクト一覧を開きます。**Add project** で追加し、検索欄やタグで絞り込めます。カードを選ぶと右側に詳細が表示され、名前・パス・タグなどを編集して **Save changes** で保存できます。星印でお気に入りに登録できます。
 
 ### 2. チケットを一覧で確認する
 
-![チケット一覧](docs/images/tickets.png)
+![チケット一覧](01.doc/images/tickets.png)
 
 左の **Tickets** では、チケットのID、タイトル、担当者、ステータス、種類、スプリントを一覧できます。右上の選択欄でプロジェクトを絞り込めます。表の左上にある **⋯** からチケットを追加でき、各行の **⋯** から既存チケットを操作できます。
 
 ### 3. ボードで進捗を見る
 
-![ステータス別のボード](docs/images/board.png)
+![ステータス別のボード](01.doc/images/board.png)
 
 左の **Board** はチケットを **Parent / Todo / Doing / Done** に分けて表示します。右上でプロジェクトとスプリントを絞り込めます。カードをドラッグするとステータスを変更できます。
 
 ### 4. スプリントの日程を見る
 
-![スプリントの追加フォームと日程表](docs/images/schedule.png)
+![スプリントの追加フォームと日程表](01.doc/images/schedule.png)
 
 左の **Schedule** でプロジェクト、スプリント名、開始日、終了日を入力し、**Add sprint** で登録します。下の日程表では、期間内のチケットを日付に沿って確認できます。
 
@@ -98,12 +98,12 @@ Node.js、npm、Viteは実行時には必要ありません。
 
 ## 起動方法
 
-`Web_base` フォルダーでPHPの開発サーバーを起動します。
+`02.src/Web_base` フォルダーでPHPの開発サーバーを起動します。
 
 ### Windows / XAMPP
 
 ```powershell
-cd Web_base
+cd 02.src/Web_base
 C:\xampp\php\php.exe -S 127.0.0.1:8001
 ```
 
@@ -121,7 +121,7 @@ php -S 127.0.0.1:8001
 
 ## DB設定
 
-設定はプロジェクト直下の `.local-data/.env` に記載します。APIは起動時にこのファイルを読み込みます。`.local-data` は公開ディレクトリ `Web_base` の外に置いてください。
+設定はプロジェクト直下の `00.secret/.env` に記載します。APIは起動時にこのファイルを読み込みます。`00.secret` は公開ディレクトリ `02.src/Web_base` の外に置いてください。
 
 ### SQLite: ローカルテスト用
 
@@ -130,7 +130,7 @@ DB_DRIVER=sqlite
 DB_PATH=./project_manager.sqlite
 ```
 
-SQLiteのデータベースファイルは `.local-data/project_manager.sqlite` に作成されます。相対パスの `DB_PATH` は `.local-data` を基準に解決します。
+SQLiteのデータベースファイルは `00.secret/project_manager.sqlite` に作成されます。相対パスの `DB_PATH` は `00.secret` を基準に解決します。
 
 ### MySQL: 本番・共有環境用
 
@@ -145,7 +145,7 @@ DB_PASS=
 
 付属のセットアップSQLを使う場合のデータベース名は `ss181301_tamitools` です。別のデータベースを使う場合は、先にそのデータベースを作成し、`DB_NAME` を変更してください。APIは接続先に必要な `project_manager_app_state` テーブルを自動作成します。`DB_DRIVER` を省略した場合もMySQLが選択されます。
 
-`.local-data` はGit管理対象外です。`Web_base` をWebサーバーの公開ディレクトリに設定し、プロジェクト直下は公開しないでください。
+`00.secret` はGit管理対象外です。`02.src/Web_base` をWebサーバーの公開ディレクトリに設定し、プロジェクト直下は公開しないでください。
 
 ### DBの構造
 
@@ -178,7 +178,7 @@ updated_at: 2026-09-30 12:00:00
 
 `projectId` はプロジェクトとの関連、`parentId` は親チケットとの関連を表します。ただしDBの外部キー制約はなく、関連の整合性はアプリケーション側で管理します。
 
-SQLiteでは現在のAPIが `project_manager_app_state` を使用します。旧バージョンで作成された `app_state` テーブルは自動では読み込まれません。MySQL用の `database/mysql_seed_local.sql` は、この旧テーブルに保存されていたローカル動作確認データを移すためのファイルです。
+SQLiteでは現在のAPIが `project_manager_app_state` を使用します。旧バージョンで作成された `app_state` テーブルは自動では読み込まれません。MySQL用の `02.src/database/mysql_seed_local.sql` は、この旧テーブルに保存されていたローカル動作確認データを移すためのファイルです。
 
 ### 構成のコツ: リレーショナル構造にしなかった理由
 
@@ -206,12 +206,12 @@ SQLiteでは現在のAPIが `project_manager_app_state` を使用します。旧
 
 ### DBの初期化と使い方
 
-SQLiteでは、`.local-data` ディレクトリを作成して前述の環境変数を設定したあと、APIへ初めてアクセスするとDBファイルとテーブルが自動作成されます。
+SQLiteでは、`00.secret` ディレクトリを作成して前述の環境変数を設定したあと、APIへ初めてアクセスするとDBファイルとテーブルが自動作成されます。
 
 MySQLでは、付属のセットアップSQLを実行できます。
 
 ```powershell
-mysql -u root -p --execute="source database/mysql_setup.sql"
+mysql -u root -p --execute="source 02.src/database/mysql_setup.sql"
 ```
 
 コマンドはプロジェクト直下で実行してください。このSQLはMySQL 8.0以降を対象とし、`ss181301_tamitools` データベースと `project_manager_app_state` テーブルを作成します。
@@ -228,10 +228,10 @@ DB_PASS=your_password
 ローカルで確認したSQLiteデータのサンプルを投入する場合は、セットアップ後に次のSQLを実行します。同じ `key` のデータがすでにある場合、`projects` と `tickets` はサンプル内容で更新されます。
 
 ```powershell
-mysql -u root -p --execute="source database/mysql_seed_local.sql"
+mysql -u root -p --execute="source 02.src/database/mysql_seed_local.sql"
 ```
 
-APIは起動時にテーブルがなければ自動作成します。MySQLへの接続に失敗した場合は `.local-data/project_manager.sqlite` に自動的に切り替わるため、MySQLへ保存されていることを確認したい場合は利用中のDBを直接確認してください。
+APIは起動時にテーブルがなければ自動作成します。MySQLへの接続に失敗した場合は `00.secret/project_manager.sqlite` に自動的に切り替わるため、MySQLへ保存されていることを確認したい場合は利用中のDBを直接確認してください。
 
 ```sql
 SELECT id, `key`, value, updated_at
@@ -293,10 +293,59 @@ POSTデータは次の形式で送信します。
 ## 主なファイル
 
 ```text
-Web_base/
+02.src/Web_base/
 	index.html          静的HTMLのエントリーポイント
 	app.js              画面描画、操作、API呼び出し
 	api.php             PHP APIとDBアクセス
-	../.local-data/.env DB設定（公開ディレクトリ外、Git管理対象外）
+	../../00.secret/.env DB設定（公開ディレクトリ外、Git管理対象外）
 	src/styles.css      画面スタイル
 ```
+
+## フォルダ構成と開発記録
+
+```text
+project-manager/
+├── 00.secret/               ローカルの.env・SQLite DB（Git管理外）
+├── 01.doc/                  作成ルール・画像・DB移行手順
+│   └── history/             整理前の進捗・ロードマップ（履歴）
+├── 02.src/
+│   ├── Web_base/            公開ディレクトリ（HTML・JS・PHP・CSS）
+│   └── database/            DBセットアップSQL・移行用スクリプト
+├── 03.log/
+│   ├── prompts.txt          再利用するプロンプト
+│   ├── current_status.txt   現在の状況
+│   └── leftover_tasks.txt   残課題・未検証事項
+├── GitSecurityTool/         セキュリティチェック用サブモジュール
+├── .pre-commit-config.yaml  サブモジュール内のチェックを呼び出す設定
+└── README.md
+```
+
+DB設定がない環境では、プロジェクト直下に `00.secret` を作り、`02.src/Web_base/.env.example` を `00.secret/.env` にコピーしてください。既存環境では設定とDBをそのまま使用します。公開ディレクトリは必ず `02.src/Web_base` に限定します。
+
+### 開発用セキュリティチェック
+
+サブモジュールを含めて取得します。
+
+```powershell
+git clone --recurse-submodules <repository-url>
+# 取得済みの環境
+git submodule update --init --recursive
+```
+
+Python 3.11以上を用意し、プロジェクト直下でセットアップします。利用可能なPythonを自動検出し、プロジェクト専用の仮想環境を `00.secret/tools-venv` に作成します。gitleaks 8.24.2のWindows x64実行ファイルも公式リリースから取得し、SHA-256を照合して `00.secret/security-bin` に配置します。
+
+```powershell
+./setup-security.ps1
+# Pythonの場所を明示する場合
+./setup-security.ps1 -PythonCommand C:/path/to/python.exe
+# 手動で全追跡ファイルをチェック
+./00.secret/tools-venv/Scripts/python.exe -m pre_commit run --all-files
+```
+
+新規・移動ファイルはGitへ追加した後に全件チェックしてください。コミット時はフックが自動実行されます。
+
+基本の検知語は `01.doc/security-keywords.example.yaml` からローカル専用の `GitSecurityTool/GitSecurityTool/keywords.yaml` へコピーします。`.env` と `00.secret/` を検知し、個人名・会社名などの独自検知語は必要に応じてローカルで設定します。このファイルと検知ログはサブモジュールのローカル除外設定に登録し、コミットしません。
+
+## 設計資料
+
+- [基本設計書（HTML）](01.doc/基本設計書.html)：現行実装の構成・画面・機能・データ・API・運用と制約。ブラウザーで開いて閲覧・印刷できます。

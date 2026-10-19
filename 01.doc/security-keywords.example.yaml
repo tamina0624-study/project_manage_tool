@@ -1,0 +1,8 @@
+env:
+  - .env
+secret:
+  - 00.secret/
+name: []
+company: []
+email: []
+windows_path: []

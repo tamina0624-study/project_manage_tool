@@ -1,6 +1,6 @@
 -- Import the locally verified SQLite state into MySQL 8.0+.
--- Source: .local-data/project_manager.sqlite / app_state
--- Target schema matches database/mysql_setup.sql.
+-- Source: 00.secret/project_manager.sqlite / app_state
+-- Target schema matches 02.src/database/mysql_setup.sql.
 
 USE `ss181301_tamitools`;
 

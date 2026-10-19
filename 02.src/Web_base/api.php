@@ -6,7 +6,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 function privateDataDirectory(): string
 {
-    return dirname(__DIR__) . '/.local-data';
+    return dirname(__DIR__, 2) . '/00.secret';
 }
 
 function loadEnvironmentFile(): void
